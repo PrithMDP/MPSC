@@ -15,7 +15,7 @@ MPMCQ<int> data;
 std::atomic<int> total_count;
 
 
-void read(int id, vector<int> vec) {
+void read(int id, vector<int>& vec) {
     static thread_local int count;
     static thread_local int pos = 0;
     while(1) {
@@ -28,7 +28,6 @@ void read(int id, vector<int> vec) {
             break;
         }
     }
-    std::cout << "TOTAL READ IS " << count << std::endl;
     total_count += count;
 }
 
@@ -49,8 +48,8 @@ int main() {
     v1.reserve(num_elements);
     vector<int> v2;
     v2.reserve(num_elements);
-    thread t3(read,1,v1);
-    thread t4(read,2,v2);
+    thread t3(read,1,std::ref(v1));
+    thread t4(read,2,std::ref(v2));
     //thread t5(read);
     //thread t6(read);
 
@@ -78,8 +77,14 @@ int main() {
     std::set_intersection(v1.begin(), v1.end(),
                           v2.begin(), v2.end(),
                           std::back_inserter(v_intersection));
-    cout << v_intersection.size() << endl;
-    for(int n : v_intersection)
-        std::cout << n << ' ';
+    assert(v_intersection.size() == 0);
+    cout << " Reader 1 indices: " << endl;
+    for(auto &x : v1) cout << x << " ";
+    cout << endl;
+    cout << " Reader 2 indices: " << endl;
+    for(auto& x: v2) cout << x << " ";
+    cout << endl;
+
+    assert((total_count == num_elements));
 
 }

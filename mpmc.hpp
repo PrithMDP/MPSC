@@ -3,7 +3,7 @@
 #include <atomic>
 #include <optional>
 //inline constexpr size_t num_elements = 1'000'000;
-inline constexpr size_t num_elements = 1'000'000;
+inline constexpr size_t num_elements = 1'000;
 
 template <typename T>
 struct cacheLineAligned {
@@ -44,13 +44,22 @@ struct MPMCQ {
     
     int read() {
         while(1) {
-            if (tail.load() >= num_elements) return false;
+            if (tail.load() >= num_elements) {
+                /*std::cout <<"returning false, tail is " << tail << std::endl;*/ 
+                return false;
+            }
             while (tail.load() >= write_idx.load()) {
                 //std::cout << " spin: idx is " << tail.load() << "| write_idx is " << write_idx.load() << std::endl;
                 thread_local int exp = num_elements - 1; 
+                thread_local int expected = 1;
                 if (tail.compare_exchange_strong(exp, num_elements)) {
-                    //std::cout << "Returning true for last element " << std::endl;
-                    return num_elements;
+                    if (flags[exp].data.compare_exchange_strong(expected,0)) {
+                        return num_elements;
+                    }
+                    else {
+                        return false;
+                    }
+                    expected = 1;
                 }
                 exp = num_elements - 1; 
                 if(tail.load() == num_elements) return false;
@@ -61,7 +70,13 @@ struct MPMCQ {
                 //std::cout << "idx is " << idx << "| write_idx is " << write_idx.load() << std::endl;
                 if(flags[idx].data.compare_exchange_strong(expected,0)) {
                     int val = tail.fetch_add(1);
-                    return val + 1;
+                    /*if(val == num_elements){ 
+                        std::cout << "val is num elements" << std::endl;
+                        std::cout << "idx is " << idx << std::endl;
+                        std::cout << "val is " << val << std::endl;
+                        std::cout << write_idx.load() << std::endl;
+                    }*/
+                    return idx + 1;
                 }
                 expected = 1;
             }
