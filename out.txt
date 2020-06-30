@@ -1,0 +1,42 @@
+idx is 0| write_idx is 9idx is 
+thread 1 read idx: 1
+idx is 0| write_idx is 9
+idx is 1| write_idx is 9
+thread 1 read idx: 2
+idx is 1| write_idx is 9
+idx is 2| write_idx is 9
+thread 1 read idx: 3
+idx is 2| write_idx is 9
+idx is 3| write_idx is 9
+thread 1 read idx: 4
+idx is 3| write_idx is 9
+idx is 4| write_idx is 9
+thread 1 read idx: 5
+idx is 4| write_idx is 9
+idx is 5| write_idx is 9
+thread 10| write_idx is  read idx: 9
+idx is 1| write_idx is 9
+idx is 2| write_idx is 9
+idx is 3| write_idx is 9
+idx is 4| write_idx is 9
+idx is 5| write_idx is 9
+idx is 6| write_idx is 9
+6
+thread 2 read idx: 7
+idx is 6| write_idx is 9
+idx is 7| write_idx is 9
+thread 2 read idx: 8
+idx is 7| write_idx is 9
+idx is 8| write_idx is 9
+thread 2 read idx: 9
+Returning true for last element 
+thread 2 read idx: 10
+TOTAL READ IS 4
+idx is 5| write_idx is 9
+idx is 6| write_idx is 9
+idx is 7| write_idx is 9
+idx is 8| write_idx is 9
+idx is 9| write_idx is 9
+thread 1 read idx: 11
+TOTAL READ IS 7
+total read element count is 11
