@@ -4,8 +4,8 @@
 #include <optional>
 #include <mutex>
 std::mutex mtx;
-inline constexpr size_t num_elements = 1'000'000;
-//inline constexpr size_t num_elements = 10'000;
+//inline constexpr size_t num_elements = 1'000'000;
+inline constexpr size_t num_elements = 100;
 
 template <typename T>
 struct cacheLineAligned {
@@ -51,17 +51,18 @@ struct MPMCQ {
         return true;
     }
     
-    int read(int id) {
+    int read() {
         while(1) {
             if (tail.load() >= num_elements) {
                 return false;
             }
             while (tail.load() >= write_idx.load()) {
+                std::cout << " spin: tail is " << tail.load() << "| write_idx is " << write_idx.load() << std::endl;
+                //if(tail.load() >= num_elements) return false;
                 thread_local int exp = num_elements - 1; 
                 thread_local int expected = 1;
-                if (tail.load() == exp) {
+                if (tail.compare_exchange_strong(exp, num_elements)) {
                     if (flags[exp].data.compare_exchange_strong(expected,0)) {
-                        tail.fetch_add(1);
                         return num_elements;
                     }
                     else {
@@ -69,7 +70,7 @@ struct MPMCQ {
                     }
                     expected = 1;
                 }
-                exp = num_elements - 1;
+                exp = num_elements - 1; 
                 if(tail.load() == num_elements) return false;
             }
             thread_local int expected;
@@ -77,9 +78,22 @@ struct MPMCQ {
             thread_local int idx;
             idx = tail.load();
             for(; idx <= write_idx.load(); ++idx) {
+                //std::cout << "idx is " << idx << "| write_idx is " << write_idx.load() << std::endl;
                 if(flags[idx].data.compare_exchange_strong(expected,0)) {
-                        tail.fetch_add(1);
-                        return idx + 1;
+                    tail.fetch_add(1);
+                    if(tail >= num_elements) {
+                        mtx.lock();
+                        std::cout << "incremented tail to " << tail << std::endl;
+                        std::cout << "idx is " << idx << std::endl;
+                        mtx.unlock();
+                    }
+                    /*if(val == num_elements){ 
+                        std::cout << "val is num elements" << std::endl;
+                        std::cout << "idx is " << idx << std::endl;
+                        std::cout << "val is " << val << std::endl;
+                        std::cout << write_idx.load() << std::endl;
+                    }*/
+                    return idx + 1;
                 }
                 expected = 1;
             }
