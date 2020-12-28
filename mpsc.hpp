@@ -5,8 +5,7 @@
 #include <mutex>
 #include <optional>
 //std::mutex mtx;
-//inline constexpr size_t num_elements = 1'000'000;
-inline constexpr size_t num_elements = 1'000;
+inline constexpr size_t num_elements = 100'000;
 
 template <typename T>
 struct cacheLineAligned {
@@ -19,14 +18,16 @@ struct cacheLineAligned {
 
 template <typename T>
 struct MPSCQ {
-    std::atomic<int> head; // token for each write
-    std::atomic<int> tail; // token for each read
+    cacheLineAligned<std::atomic<int>> head; // token for each write
+    cacheLineAligned<std::atomic<int>> tail; // token for each read
     
     cacheLineAligned<T> buffer[num_elements];
     cacheLineAligned<std::atomic<int>> flags[num_elements];
 
     
-    MPSCQ(): head(0), tail(0){
+    MPSCQ(){
+        head.data = 0;
+        tail.data = 0;
         for(int i = 0; i < num_elements; ++i) {
             flags[i].data.store(0);
         }
@@ -38,20 +39,18 @@ struct MPSCQ {
     // set ready to read and increase write_idx
   
     bool try_write(T val) {
-        int pos = head.load();
+        int pos = head.data.load(std::memory_order_acquire);
         int pos_copy = pos;
-        // std::cout << "writing to " << pos << std::endl;
         pos = pos % num_elements;
         int expected = 0; 
         if(flags[pos].data.compare_exchange_strong(expected, 1)){
-            if(pos_copy != head.load()) { 
+            if(pos_copy != head.data.load(std::memory_order_acquire)) { 
                 flags[pos].data = 0;
                 return false;
             }
-            head.store(head.load() + 1);
+            head.data.store(head.data.load() + 1, std::memory_order_release);
             buffer[pos].data = val;
             flags[pos].data.store(2);
-             // std::cout << "writing " << val.data << std::endl;
             return true;
         }
         else {
@@ -61,12 +60,12 @@ struct MPSCQ {
     
     /* only one reader at a time */
     std::optional<T> try_read() {
-        int read_pos = tail.load();
+        int read_pos = tail.data.load(std::memory_order_acquire);
         read_pos = read_pos % num_elements;
         if (!(flags[read_pos].data.load() == 2)) { return {}; }
         auto ret = buffer[read_pos];
         flags[read_pos].data.store(0);
-        tail.store(tail.load() + 1 );
+        tail.data.store(tail.data.load() + 1, std::memory_order_release);
         // std::cout << "successfully read " << read_pos << std::endl;
         return ret.data;
     }

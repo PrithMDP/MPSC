@@ -20,8 +20,11 @@ struct item {
     int writer;
 };
 
+#ifdef LOCKED
+NaiveQ<item> data;
+#else
 MPSCQ<item> data;
-//NaiveQ<item> data;
+#endif
 std::atomic<bool> keep_writing = true;
 std::atomic<bool> keep_reading = true;
 
@@ -59,16 +62,23 @@ void write(int id) {
 }
 
 int main() {
-    thread t1(write,0);
-    thread t2(write,1);
+    thread writer1(write,0);
+    thread writer2(write,1);
+    thread writer3(write,2);
+    thread writer4(write,3);
+    thread writer5(write,4);
 
     vector<item> reads;
     reads.reserve(num_elements);
-    thread t3(read,1,std::ref(reads));
+    thread reader(read,1,std::ref(reads));
 
-    t1.join();
-    t2.join();
-    t3.join();
+    writer1.join();
+    writer2.join();
+    writer3.join();
+    writer4.join();
+    writer5.join();
+
+    reader.join();
     
     std::cout << "Total writes were: " << total_writes << endl;
     
