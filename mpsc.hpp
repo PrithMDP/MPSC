@@ -18,18 +18,18 @@ struct alignas(64) cacheLineAligned {
 
 template <typename T>
 struct MPSCQ {
-    cacheLineAligned<std::atomic<int>> head; // token for each write
-    cacheLineAligned<std::atomic<int>> tail; // token for each read
+    cacheLineAligned<std::atomic<uint64_t>> head; // token for each write
+    cacheLineAligned<std::atomic<uint64_t>> tail; // token for each read
     
     cacheLineAligned<T> buffer[num_elements];
-    cacheLineAligned<std::atomic<int>> flags[num_elements];
+    cacheLineAligned<std::atomic<uint64_t>> flags[num_elements];
     cacheLineAligned<std::atomic<int>> version[num_elements];
 
     
     MPSCQ(){
         head.data = 0;
         tail.data = 0;
-        for(int i = 0; i < num_elements; ++i) {
+        for(size_t i = 0; i < num_elements; ++i) {
             flags[i].data.store(0);
             version[i].data.store(-1);
         }
@@ -41,14 +41,14 @@ struct MPSCQ {
     // set ready to read and increase write_idx
   
     bool try_write(T val) {
-        int pos = head.data.fetch_add(1);
-        int pos_copy = pos;
-        int c_version = pos / num_elements;
+        uint64_t pos = head.data.fetch_add(1);
+        uint64_t pos_copy = pos;
+        uint64_t c_version = pos / num_elements;
         pos = pos % num_elements;
         int expected_version = c_version - 1;
         while(version[pos].data.load(std::memory_order_acquire) != expected_version) {
         }
-        int expected = 0; 
+        uint64_t expected = 0; 
         while(!flags[pos].data.compare_exchange_strong(expected, 1)){
             expected = 0;
         }

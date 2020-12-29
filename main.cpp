@@ -3,6 +3,7 @@
 #include "mpsc.hpp"
 #include "queue.hpp"
 #include "linkedlist.hpp"
+#include "vectorqueue.hpp"
 #include <vector>
 #include <mutex>
 #include <algorithm>
@@ -26,6 +27,8 @@ struct item {
 LLQ<item> data;
 #elif LOCKED 
 NaiveQ<item> data;
+#elif VECLOCKED
+VecQ<item> data; 
 #else
 MPSCQ<item> data;
 #endif
