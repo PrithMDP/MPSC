@@ -21,12 +21,15 @@ struct item {
     int writer;
 };
 
-#ifdef LOCKED
-//NaiveQ<item> data;
+
+#ifdef LINKED
 LLQ<item> data;
+#elif LOCKED 
+NaiveQ<item> data;
 #else
 MPSCQ<item> data;
 #endif
+
 std::atomic<bool> keep_writing = true;
 std::atomic<bool> keep_reading = true;
 
