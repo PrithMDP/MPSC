@@ -95,18 +95,20 @@ int main() {
     for(auto item: result) {
         if(!std::is_sorted(item.second.begin(), item.second.end())) {
             std::cout << "VECTOR IS NOT SORTED! ERROR" << std::endl;
-            /*
-            for(auto x: item.second) {
-                cout << x << endl;
-            }
+            
             for(int i = 0; i < item.second.size() - 1; ++i) {
                 if(item.second[i] >= item.second[i+1]) {
                     cout << item.second[i] << " " << item.second[i+1] << endl;
                 }
-            }*/
+            }
         }
         else {
-            cout << "VECTOR IS SORTED" << endl;
+            cout << "VECTOR IS SORTED: Size " << item.second.size() << endl;
+            for(int i = 0; i < item.second.size() - 1; ++i) {                                        
+                if(item.second[i] >= item.second[i+1]) {
+                    cout << item.second[i] << " " << item.second[i+1] << endl;
+                }
+            }
         }
     }
     
