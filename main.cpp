@@ -2,6 +2,7 @@
 #include <thread>
 #include "mpsc.hpp"
 #include "queue.hpp"
+#include "linkedlist.hpp"
 #include <vector>
 #include <mutex>
 #include <algorithm>
@@ -21,13 +22,15 @@ struct item {
 };
 
 #ifdef LOCKED
-NaiveQ<item> data;
+//NaiveQ<item> data;
+LLQ<item> data;
 #else
 MPSCQ<item> data;
 #endif
 std::atomic<bool> keep_writing = true;
 std::atomic<bool> keep_reading = true;
 
+//const int max_writes = 50'000'000;
 //const int max_writes = 50'000'000;
 const int max_writes = 50'000'000;
 std::atomic<int> total_writes;

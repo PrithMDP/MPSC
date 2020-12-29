@@ -1,5 +1,6 @@
+*out*
 a.out
 *.txt
 *.swp
 *.dSYM
-
+.DS_Store
