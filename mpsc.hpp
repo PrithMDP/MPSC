@@ -4,7 +4,6 @@
 #include <optional>
 #include <mutex>
 #include <optional>
-//std::mutex mtx;
 inline constexpr size_t num_elements = 100'000;
 
 template <typename T>
@@ -37,12 +36,13 @@ struct MPSCQ {
     
     MPSCQ(MPSCQ&&) = default;
 
-    // need to protect writers from writers
-    // set ready to read and increase write_idx
+    /*
+        This will block till the current spot has been read from and till the previous writer has finished.
+        This is needed to ensure FIFO ordering.
+    */
   
     bool try_write(T val) {
         uint64_t pos = head.data.fetch_add(1);
-        uint64_t pos_copy = pos;
         uint64_t c_version = pos / num_elements;
         pos = pos % num_elements;
         int expected_version = c_version - 1;
@@ -59,7 +59,10 @@ struct MPSCQ {
         return true;
     }
     
-    /* only one reader at a time */
+    /*
+        Reader always reads sequentially. We rely on producers being sane to make consumption
+        only depend on the slot being full.
+    */
     std::optional<T> try_read() {
         int read_pos = tail.data.load(std::memory_order_acquire);
         read_pos = read_pos % num_elements;

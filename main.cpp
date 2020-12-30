@@ -37,20 +37,28 @@ std::atomic<bool> keep_writing = true;
 std::atomic<bool> keep_reading = true;
 
 //const int max_writes = 50'000'000;
-//const int max_writes = 50'000'000;
-const int max_writes = 50'000'000;
+const int max_writes = 500'000'000;
 std::atomic<int> total_writes;
 
 std::mutex cout_mtx;
 void read(int id, vector<item>& vec) {
-    // using namespace std::chrono_literals;
+    std::unordered_map<int,int> mapping;
     int total_reads = 0;
     while(total_reads != max_writes) {
         auto val  = data.try_read();
         if(!val){
             continue;
         }
-        vec.push_back(val.value());
+        if(mapping.find(val->writer) != mapping.end()) {
+            if(mapping[val->writer] != val->data - 1) {
+                std::cout << "ERROR for writer " << mapping[val->writer] << " .Current is " << mapping[val->writer] <<" .Next is: " << val->data << endl ;
+                std::terminate();
+            }
+            mapping[val->writer] = val->data;
+        }
+        else {
+            mapping[val->writer] = val->data;
+        }
         total_reads++;
     }
     std::cout << " Done reading " << endl;
@@ -98,6 +106,8 @@ int main() {
     // data should be consumer in order per writer
     // each writer writes with its own seq num
     
+    return 0;
+    /*
     for(auto item: result) {
         if(!std::is_sorted(item.second.begin(), item.second.end())) {
             std::cout << "VECTOR IS NOT SORTED! ERROR" << std::endl;
@@ -117,5 +127,6 @@ int main() {
             }
         }
     }
+    */
     
 }
