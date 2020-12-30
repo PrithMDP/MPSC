@@ -4,6 +4,7 @@
 #include "queue.hpp"
 #include "linkedlist.hpp"
 #include "vectorqueue.hpp"
+// #include "finegrained.hpp"
 #include <vector>
 #include <mutex>
 #include <algorithm>
@@ -18,7 +19,7 @@ using std::vector;
 using std::unordered_map;
 
 struct item {
-    int data;
+    uint64_t data;
     int writer;
 };
 
@@ -28,30 +29,30 @@ LLQ<item> data;
 #elif LOCKED 
 NaiveQ<item> data;
 #elif VECLOCKED
-VecQ<item> data; 
+VecQ<item> data;
 #else
 MPSCQ<item> data;
 #endif
 
-std::atomic<bool> keep_writing = true;
-std::atomic<bool> keep_reading = true;
-
-//const int max_writes = 50'000'000;
-const int max_writes = 500'000'000;
-std::atomic<int> total_writes;
+const int max_writes = 50'000'000;
+std::atomic<uint64_t> total_writes;
 
 std::mutex cout_mtx;
-void read(int id, vector<item>& vec) {
-    std::unordered_map<int,int> mapping;
-    int total_reads = 0;
-    while(total_reads != max_writes) {
+
+
+void read(int id) {
+    std::unordered_map<uint64_t,uint64_t> mapping;
+    uint64_t total_reads = 0;
+    // while(total_reads != max_writes) {
+    while(true) {
         auto val  = data.try_read();
         if(!val){
             continue;
         }
         if(mapping.find(val->writer) != mapping.end()) {
             if(mapping[val->writer] != val->data - 1) {
-                std::cout << "ERROR for writer " << mapping[val->writer] << " .Current is " << mapping[val->writer] <<" .Next is: " << val->data << endl ;
+                std::cout << "ERROR for writer " << val->writer << " .Current is " << mapping[val->writer] <<" .Next is: " << val->data << ".from writer " << val->writer << endl ;
+                std::cout << "Reads are " << total_reads << std::endl;
                 std::terminate();
             }
             mapping[val->writer] = val->data;
@@ -60,13 +61,20 @@ void read(int id, vector<item>& vec) {
             mapping[val->writer] = val->data;
         }
         total_reads++;
+        if(total_reads % max_writes == 0) {
+            std::cout << "Stats: total reads/writes are: " << total_reads << std::endl;
+            for(auto &x: mapping) {
+                cout << "Writer: " << x.first << " is at " << x.second << std::endl;
+            }
+        }
     }
     std::cout << " Done reading " << endl;
 }
 
 void write(int id) {
-    static thread_local int val = 0;
-    while(total_writes.load() <= max_writes) { 
+    static thread_local uint64_t val = 0;
+    //while(total_writes.load() <= max_writes) { 
+    while(true) { 
         if(data.try_write({val,id})) {
             //cout_mtx.lock();
             //cout << id << " writing value : "<< val << endl;
@@ -85,9 +93,7 @@ int main() {
     thread writer4(write,3);
     thread writer5(write,4);
 
-    vector<item> reads;
-    reads.reserve(num_elements);
-    thread reader(read,1,std::ref(reads));
+    thread reader(read,1);
 
     writer1.join();
     writer2.join();
@@ -98,35 +104,5 @@ int main() {
     reader.join();
     
     std::cout << "Total writes were: " << total_writes << endl;
-    
-    unordered_map<int,vector<int>> result;
-    for(auto x: reads) {
-        result[x.writer].push_back(x.data);
-    }
-    // data should be consumer in order per writer
-    // each writer writes with its own seq num
-    
     return 0;
-    /*
-    for(auto item: result) {
-        if(!std::is_sorted(item.second.begin(), item.second.end())) {
-            std::cout << "VECTOR IS NOT SORTED! ERROR" << std::endl;
-            
-            for(int i = 0; i < item.second.size() - 1; ++i) {
-                if(item.second[i] >= item.second[i+1]) {
-                    cout << item.second[i] << " " << item.second[i+1] << endl;
-                }
-            }
-        }
-        else {
-            cout << "VECTOR IS SORTED: Size " << item.second.size() << endl;
-            for(int i = 0; i < item.second.size() - 1; ++i) {                                        
-                if(item.second[i] >= item.second[i+1]) {
-                    cout << item.second[i] << " " << item.second[i+1] << endl;
-                }
-            }
-        }
-    }
-    */
-    
 }

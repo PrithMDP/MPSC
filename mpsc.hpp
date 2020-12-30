@@ -64,7 +64,7 @@ struct MPSCQ {
         only depend on the slot being full.
     */
     std::optional<T> try_read() {
-        int read_pos = tail.data.load(std::memory_order_acquire);
+        uint64_t read_pos = tail.data.load(std::memory_order_acquire);
         read_pos = read_pos % num_elements;
         if (!(flags[read_pos].data.load() == 2)) { return {}; }
         auto ret = buffer[read_pos];
