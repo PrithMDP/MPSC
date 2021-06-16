@@ -70,7 +70,7 @@ void write(Symbol& D) {
         if(D.data[try_idx].state.compare_exchange_strong(readyVal, WRITING)) {
             break;
         }
-        try_idx %= 2;
+        try_idx = 0;
     }
     D.data[try_idx].version = write_version;
     if(!D.data[try_idx].dirty) {
