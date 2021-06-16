@@ -41,7 +41,6 @@ std::vector<uint64_t> vec;
 void read() {
     while(!done.load()) {
         auto rec = Q.try_read();
-        static uint64_t version = 0;
         if(rec) {
             uint8_t readyVal = READY;
             auto& data = *rec;
